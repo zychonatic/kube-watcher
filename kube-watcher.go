@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	//"net/http"
+	"net/http"
+	"bytes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -15,9 +16,11 @@ import (
 var (
 	nSpaces    []string
 	kubeconfig string
+	url        string
 )
 
 func init() {
+	url = "http://localhost:9200/kubeevents/_doc/"
 	kubeconfig = filepath.Join("../../../../../MobaXterm/home/config.development")
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
@@ -91,6 +94,15 @@ func main() {
 					}
 					jsonMessage, _ := json.Marshal(message)
 					fmt.Println(string(jsonMessage))
+					req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonMessage))
+					req.Header.Set("Content-Type", "application/json")
+					if err != nil {
+						// Handle error
+						panic(err)
+					}
+					client := &http.Client{}
+					resp, err := client.Do(req)
+					defer resp.Body.Close()
 					//fmt.Println(nSpace, event.FirstTimestamp, event.LastTimestamp, event.Name, event.Reason, event.Message)
 				}
 				//diff := time.Now().Sub(event.LastTimestamp)
