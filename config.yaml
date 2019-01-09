@@ -1,0 +1,2 @@
+eshost: "localhost"
+kubeconfig: "/etc/kubernetes/admin.conf"
