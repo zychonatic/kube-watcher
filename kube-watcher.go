@@ -4,16 +4,20 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"time"
+
+	"k8s.io/client-go/rest"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"log"
-	"net/http"
-	"path/filepath"
-	"time"
 )
 
 var (
@@ -21,6 +25,7 @@ var (
 	kubeconfig string
 	baseurl    string
 	kubeevents = prometheus.NewCounterVec(prometheus.CounterOpts{Name: "kubeevents", Help: "Kubeevents"}, []string{"namespace", "type", "name"})
+	config     *rest.Config
 )
 
 func init() {
@@ -32,9 +37,14 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	baseurl = "http://" + viper.GetString("eshost") + ":9200/kubeevents-"
-	kubeconfig = filepath.Join(viper.GetString("kubeconfig"))
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if viper.GetBool("inKubernetes") {
+		baseurl = "http://" + os.Getenv("ESHOST") + ":9200/kubeevents-"
+		config, err = clientcmd.BuildConfigFromFlags("", "")
+	} else {
+		baseurl = "http://" + viper.GetString("eshost") + ":9200/kubeevents-"
+		kubeconfig = filepath.Join(viper.GetString("kubeconfig"))
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+	}
 	if err != nil {
 		log.Fatal(err)
 	}
