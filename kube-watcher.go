@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -18,9 +20,11 @@ var (
 	nSpaces    []string
 	kubeconfig string
 	baseurl    string
+	kubeevents = prometheus.NewCounterVec(prometheus.CounterOpts{Name: "kubeevents", Help: "Kubeevents"}, []string{"namespace", "type", "name"})
 )
 
 func init() {
+	prometheus.MustRegister(kubeevents)
 	viper.SetConfigName("config")
 	viper.AddConfigPath("./")
 	viper.SetConfigType("yaml")
@@ -54,7 +58,7 @@ func init() {
 	}
 
 }
-func main() {
+func watcher() {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		log.Fatal(err)
@@ -90,6 +94,7 @@ func main() {
 						"source":    event.Source,
 						"count":     event.Count,
 					}
+					kubeevents.WithLabelValues(nSpace, string(event.Type), string(event.Name)).Inc()
 					jsonMessage, _ := json.Marshal(message)
 					fmt.Println(string(jsonMessage))
 					req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonMessage))
@@ -105,5 +110,11 @@ func main() {
 		}
 		time.Sleep(180 * time.Second)
 	}
+}
+
+func main() {
+	go watcher()
+	http.Handle("/metrics", promhttp.Handler())
+	log.Fatal(http.ListenAndServe(":8080", nil))
 
 }
