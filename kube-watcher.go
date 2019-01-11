@@ -39,7 +39,7 @@ func init() {
 	}
 	if viper.GetBool("inKubernetes") {
 		baseurl = "http://" + os.Getenv("ESHOST") + ":9200/kubeevents-"
-		config, err = clientcmd.BuildConfigFromFlags("", "")
+		config, err = rest.InClusterConfig()
 	} else {
 		baseurl = "http://" + viper.GetString("eshost") + ":9200/kubeevents-"
 		kubeconfig = filepath.Join(viper.GetString("kubeconfig"))
