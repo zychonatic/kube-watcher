@@ -24,7 +24,7 @@ var (
 	nSpaces    []string
 	kubeconfig string
 	baseurl    string
-	kubeevents = prometheus.NewCounterVec(prometheus.CounterOpts{Name: "kubeevents", Help: "Kubeevents"}, []string{"namespace", "type", "name"})
+	kubeevents = prometheus.NewCounterVec(prometheus.CounterOpts{Name: "kubeevents", Help: "Kubeevents"}, []string{"namespace", "type"})
 	config     *rest.Config
 )
 
@@ -104,7 +104,7 @@ func watcher() {
 						"source":    event.Source,
 						"count":     event.Count,
 					}
-					kubeevents.WithLabelValues(nSpace, string(event.Type), string(event.Name)).Inc()
+					kubeevents.WithLabelValues(nSpace, string(event.Type)).Inc()
 					jsonMessage, _ := json.Marshal(message)
 					fmt.Println(string(jsonMessage))
 					req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonMessage))
